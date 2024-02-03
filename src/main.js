@@ -58,6 +58,33 @@ function renderImage({totalHits, hits}) {
   }    
 }
 
+function createElementGallery({webformatURL, largeImageURL, tags, likes, views, comments, downloads}) {
+  return `
+<ul class="card">
+  <a class="gallery-link" href="${largeImageURL}">
+    <img class="gallery-image" src="${webformatURL}" alt="${tags}">
+  </a>
+  <ul class="item-img">
+    <li class="elem-img">
+      <p class="elem-name">Likes</p>
+      <p>${likes}</p>
+    </li>
+    <li class="elem-img">
+      <p class="elem-name">Views</p>
+      <p>${views}</p>
+    </li>
+    <li class="elem-img">
+      <p class="elem-name">Comments</p>
+      <p>${comments}</p>
+    </li>
+    <li class="elem-img">
+      <p class="elem-name">Downloads</p>
+      <p>${downloads}</p>
+    </li>
+  </ul>
+</ul>
+`}
+
 function onWarning() {
   iziToast.warning({
     title: 'Sorry,',
@@ -119,32 +146,4 @@ function onRejected(error) {
     ]
   });
 };
-
-
-function createElementGallery({webformatURL, largeImageURL, tags, likes, views, comments, downloads}) {
-  return `
-<ul class="card">
-  <a class="gallery-link" href="${largeImageURL}">
-    <img class="gallery-image" src="${webformatURL}" alt="${tags}">
-  </a>
-  <ul class="item-img">
-    <li class="elem-img">
-      <p class="elem-name">Likes</p>
-      <p>${likes}</p>
-    </li>
-    <li class="elem-img">
-      <p class="elem-name">Views</p>
-      <p>${views}</p>
-    </li>
-    <li class="elem-img">
-      <p class="elem-name">Comments</p>
-      <p>${comments}</p>
-    </li>
-    <li class="elem-img">
-      <p class="elem-name">Downloads</p>
-      <p>${downloads}</p>
-    </li>
-  </ul>
-</ul>
-`}
 
