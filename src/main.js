@@ -5,57 +5,92 @@ import errorIcon from './img/err.svg';
 import xIcon from './img/x.svg';
 import SimpleLightbox from "simplelightbox";
 import "simplelightbox/dist/simple-lightbox.min.css";
+import axios from 'axios';
 
 const lightbox = new SimpleLightbox('.gallery a', {captionDelay: 250, captionsData: 'alt'});
 
-const form = document.querySelector(".form");
-const imageList = document.querySelector(".gallery");
+const form = document.querySelector('.form');
+const imageList = document.querySelector('.gallery');
+const loadBtn = document.querySelector('.loader-and-btn');
 
-form.addEventListener("submit", onSearch);
+form.addEventListener('submit', onSearch);
+
+let memoryInput;
+let pageNamber = 1;
+const perPage = 15;
 
 function onSearch (event) {
   event.preventDefault();
+  onBtnRemove();
   const keyWord = event.target.keyword.value.trim();
   if (keyWord) {
-    imageList.innerHTML = '<span class="loader"></span>';
-    fetchImage(keyWord)
-    .then((images) => renderImage(images))
-    .catch((error) => onRejected(error));
+    if(memoryInput !== keyWord) {
+      pageNamber = 1;
+    }
+    memoryInput = keyWord;
+    imageList.innerHTML = '';
+    loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
+    onRequest();
     form.reset();
   }
 }
 
-function fetchImage(keyWord) {
-  const BASE_URL = 'https://pixabay.com/';
-  const END_POINT = 'api/';
-  const PARAMS = new URLSearchParams({
-    key: '42096263-920755fbf423cd5814494514c',
-    q: keyWord,
-    image_type: 'photo',
-    orientation: 'horizontal',
-    safesearch: true
-  });
-  const URL = `${BASE_URL}${END_POINT}?${PARAMS}`;
+function onBtnRemove () {
+  const btnLoadMore = document.querySelector('.btn-load-more');
+  if(btnLoadMore !== null) {
+    btnLoadMore.remove();
+  }
+}
 
-  return fetch(URL)
-    .then((response) => {
-      if (response.ok) {
-        return response.json();
-      }
-      throw new Error(`${response.status} - ${response.statusText}`);
+function onRequest () {
+  axiosRequest()
+    .then(({data}) => renderImage(data))
+    .catch((error) => onRejected(error));
+}
+
+async function axiosRequest() {
+  axios.defaults.baseURL = 'https://pixabay.com';
+  return await axios.get('api/', {
+    params: {
+      key: '42096263-920755fbf423cd5814494514c',
+      q: memoryInput,
+      image_type: 'photo',
+      orientation: 'horizontal',
+      safesearch: true,
+      page: pageNamber,
+      per_page: perPage
     }
-  );
+  });
 }
 
 function renderImage({totalHits, hits}) {
+  onLoaderRemove();
   if (parseInt(totalHits) > 0) {
+    if (imageList.innerHTML === '' && totalHits > perPage) {
+      loadBtn.insertAdjacentHTML('beforeend', '<button class="btn-load-more">Load more</button>');
+    }
     const markup = hits.map(createElementGallery).join('');
-    imageList.innerHTML = markup;
+    imageList.insertAdjacentHTML('beforeend', markup);
+    
+    const btnLoadMore = document.querySelector('.btn-load-more');
+    btnLoadMore.addEventListener('click', loadMoreImages);
     lightbox.refresh();
   }else{
-    imageList.innerHTML = '';
     onWarning();
   }    
+}
+
+function onLoaderRemove () {
+  const loader = document.querySelector('.loader');
+  if(loader !== null) {
+    loader.remove();
+  }
+}
+
+function loadMoreImages () {
+  loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
+  pageNamber += 1;
+  onRequest();
 }
 
 function createElementGallery({webformatURL, largeImageURL, tags, likes, views, comments, downloads}) {
