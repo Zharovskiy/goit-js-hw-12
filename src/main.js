@@ -16,20 +16,21 @@ const loadBtn = document.querySelector('.loader-and-btn');
 form.addEventListener('submit', onSearch);
 
 let memoryInput;
-let pageNamber = 1;
-const perPage = 15;
+let pageNumber = 1;
+let perPage = 15;
+let totalQuntityImg;
+
 
 function onSearch (event) {
   event.preventDefault();
   onBtnRemove();
+  onMessageRemove();
   const keyWord = event.target.keyword.value.trim();
   if (keyWord) {
-    if(memoryInput !== keyWord) {
-      pageNamber = 1;
-    }
+    pageNumber = 1;
+    perPage = 15;
     memoryInput = keyWord;
     imageList.innerHTML = '';
-    loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
     onRequest();
     form.reset();
   }
@@ -38,13 +39,25 @@ function onSearch (event) {
 function onBtnRemove () {
   const btnLoadMore = document.querySelector('.btn-load-more');
   if(btnLoadMore !== null) {
+    btnLoadMore.removeEventListener('click', maxQuntityPage);
     btnLoadMore.remove();
   }
 }
 
+function onMessageRemove () {
+  const message = document.querySelector('.is-not-images');
+  if(message !== null) {
+    message.remove();
+  }
+}
+
 function onRequest () {
+  loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
   axiosRequest()
-    .then(({data}) => renderImage(data))
+    .then(({data}) => {
+      pageNumber += 1;
+      renderImage(data)
+    })
     .catch((error) => onRejected(error));
 }
 
@@ -57,27 +70,57 @@ async function axiosRequest() {
       image_type: 'photo',
       orientation: 'horizontal',
       safesearch: true,
-      page: pageNamber,
+      page: pageNumber,
       per_page: perPage
     }
   });
 }
 
+function maxQuntityPage () {
+  const remainder = totalQuntityImg % perPage;
+  const quantityPage = ((totalQuntityImg - remainder) / perPage) + 1; 
+  if (pageNumber === quantityPage) {
+    perPage = remainder;
+    onRequest();
+    onBtnRemove();
+    loadBtn.insertAdjacentHTML('beforeend', `<p class="is-not-images">We're sorry, but you've reached the end of search results.</p>`);
+  } else {
+    onRequest();
+  }
+}
+
 function renderImage({totalHits, hits}) {
   onLoaderRemove();
   if (parseInt(totalHits) > 0) {
+    totalQuntityImg = totalHits;
+
     if (imageList.innerHTML === '' && totalHits > perPage) {
       loadBtn.insertAdjacentHTML('beforeend', '<button class="btn-load-more">Load more</button>');
+      const btnLoadMore = document.querySelector('.btn-load-more');
+      btnLoadMore.addEventListener('click', maxQuntityPage);
     }
+
     const markup = hits.map(createElementGallery).join('');
     imageList.insertAdjacentHTML('beforeend', markup);
+
+    if (pageNumber > 2) {
+      onScroll();
+    }
     
-    const btnLoadMore = document.querySelector('.btn-load-more');
-    btnLoadMore.addEventListener('click', loadMoreImages);
     lightbox.refresh();
   }else{
     onWarning();
   }    
+}
+
+function onScroll () {
+  const elemCard = document.querySelector('.card');
+  const getItemCoords = elemCard.getBoundingClientRect();
+  window.scrollBy({
+    top: getItemCoords.height * 2,
+    left: getItemCoords.left, 
+    behavior: 'smooth',
+  });
 }
 
 function onLoaderRemove () {
@@ -85,12 +128,6 @@ function onLoaderRemove () {
   if(loader !== null) {
     loader.remove();
   }
-}
-
-function loadMoreImages () {
-  loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
-  pageNamber += 1;
-  onRequest();
 }
 
 function createElementGallery({webformatURL, largeImageURL, tags, likes, views, comments, downloads}) {
@@ -121,6 +158,7 @@ function createElementGallery({webformatURL, largeImageURL, tags, likes, views, 
 `}
 
 function onWarning() {
+  onLoaderRemove();
   iziToast.warning({
     title: 'Sorry,',
     titleColor: '#FFFFFF',
@@ -152,6 +190,7 @@ function onWarning() {
 }
 
 function onRejected(error) {
+  onLoaderRemove();
   iziToast.show({
     title: 'Error',
     titleColor: '#FFFFFF',
