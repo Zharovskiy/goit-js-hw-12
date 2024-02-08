@@ -16,15 +16,12 @@ const loadBtn = document.querySelector('.loader-and-btn');
 form.addEventListener('submit', onSearch);
 
 let memoryInput;
-let pageNumber = 1;
-let perPage = 15;
-let totalQuntityImg;
-
+let pageNumber;
+let perPage;
 
 function onSearch (event) {
   event.preventDefault();
   onBtnRemove();
-  onMessageRemove();
   const keyWord = event.target.keyword.value.trim();
   if (keyWord) {
     pageNumber = 1;
@@ -39,15 +36,8 @@ function onSearch (event) {
 function onBtnRemove () {
   const btnLoadMore = document.querySelector('.btn-load-more');
   if(btnLoadMore !== null) {
-    btnLoadMore.removeEventListener('click', maxQuntityPage);
+    btnLoadMore.removeEventListener('click', onRequest);
     btnLoadMore.remove();
-  }
-}
-
-function onMessageRemove () {
-  const message = document.querySelector('.is-not-images');
-  if(message !== null) {
-    message.remove();
   }
 }
 
@@ -58,7 +48,11 @@ function onRequest () {
       pageNumber += 1;
       renderImage(data)
     })
-    .catch((error) => onRejected(error));
+    .catch((error) => showIziToast({
+      message: error,
+      backgroundColor: '#EF4040',
+      iconUrl: errorIcon
+    }));
 }
 
 async function axiosRequest() {
@@ -76,28 +70,24 @@ async function axiosRequest() {
   });
 }
 
-function maxQuntityPage () {
-  const remainder = totalQuntityImg % perPage;
-  const quantityPage = ((totalQuntityImg - remainder) / perPage) + 1; 
-  if (pageNumber === quantityPage) {
-    perPage = remainder;
-    onRequest();
-    onBtnRemove();
-    loadBtn.insertAdjacentHTML('beforeend', `<p class="is-not-images">We're sorry, but you've reached the end of search results.</p>`);
-  } else {
-    onRequest();
-  }
-}
-
 function renderImage({totalHits, hits}) {
   onLoaderRemove();
   if (parseInt(totalHits) > 0) {
-    totalQuntityImg = totalHits;
+    const totalPages = Math.ceil(totalHits / perPage);
 
     if (imageList.innerHTML === '' && totalHits > perPage) {
       loadBtn.insertAdjacentHTML('beforeend', '<button class="btn-load-more">Load more</button>');
       const btnLoadMore = document.querySelector('.btn-load-more');
-      btnLoadMore.addEventListener('click', maxQuntityPage);
+      btnLoadMore.addEventListener('click', onRequest);
+    }
+
+    if (pageNumber > totalPages) {
+      onBtnRemove();
+      showIziToast({
+        message: `We're sorry, but you've reached the end of search results.`,
+        backgroundColor: '#FFA000',
+        iconUrl: dangIcon
+      });
     }
 
     const markup = hits.map(createElementGallery).join('');
@@ -109,7 +99,11 @@ function renderImage({totalHits, hits}) {
     
     lightbox.refresh();
   }else{
-    onWarning();
+    showIziToast({
+      message: error,
+      backgroundColor: '#EF4040',
+      iconUrl: errorIcon
+    });
   }    
 }
 
@@ -157,54 +151,21 @@ function createElementGallery({webformatURL, largeImageURL, tags, likes, views, 
 </ul>
 `}
 
-function onWarning() {
-  onLoaderRemove();
-  iziToast.warning({
-    title: 'Sorry,',
-    titleColor: '#FFFFFF',
-    message: 'there are no images matching your search query. Please try again!',
-    messageColor: '#FFFFFF',
-    messageSize: '16px',
-    backgroundColor: '#FFA000',
-    iconUrl: dangIcon,
-    position: 'center',
-    close: false,
-    buttons: [
-      [
-        `<button type="button" style="
-          background-color: #FFA000; 
-          width: 20px; 
-          height: 20px; 
-          padding: 5px">
-            <img style="
-              width: 10px; 
-              height: 10px" 
-              src=${xIcon}>
-        </button>`,
-        function (instance, toast) {
-          instance.hide({ transitionOut: 'fadeOut' }, toast);
-        },
-      ],
-    ]
-  });
-}
-
-function onRejected(error) {
+function showIziToast({message, backgroundColor, iconUrl}) {
   onLoaderRemove();
   iziToast.show({
-    title: 'Error',
     titleColor: '#FFFFFF',
-    message: `${error}`,
+    message: `${message}`,
     messageColor: '#FFFFFF',
     messageSize: '16px',
-    backgroundColor: '#EF4040',
-    iconUrl: errorIcon,
+    backgroundColor: `${backgroundColor}`,
+    iconUrl: `${iconUrl}`,
     position: 'topRight',
     close: false,
     buttons: [
       [
         `<button type="button" style="
-          background-color: #EF4040; 
+          background-color: ${backgroundColor}; 
           width: 20px; 
           height: 20px; 
           padding: 5px">
@@ -220,4 +181,3 @@ function onRejected(error) {
     ]
   });
 };
-
