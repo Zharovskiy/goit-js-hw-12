@@ -21,43 +21,45 @@ let perPage;
 
 function onSearch (event) {
   event.preventDefault();
-  onBtnRemove();
+  removeLoadMoreButton();
   const keyWord = event.target.keyword.value.trim();
   if (keyWord) {
     pageNumber = 1;
     perPage = 15;
     memoryInput = keyWord;
     imageList.innerHTML = '';
-    onRequest();
+    loadImages();
     form.reset();
   }
 }
 
-function onBtnRemove () {
+function removeLoadMoreButton () {
   const btnLoadMore = document.querySelector('.btn-load-more');
   if(btnLoadMore !== null) {
-    btnLoadMore.removeEventListener('click', onRequest);
+    btnLoadMore.removeEventListener('click', loadImages);
     btnLoadMore.remove();
   }
 }
 
-function onRequest () {
+async function loadImages () {
   loadBtn.insertAdjacentHTML('afterbegin', '<span class="loader"></span>');
-  axiosRequest()
-    .then(({data}) => {
-      pageNumber += 1;
-      renderImage(data)
-    })
-    .catch((error) => showIziToast({
-      message: error,
+  try {
+    const response = await axiosRequest();
+    pageNumber += 1;
+    renderImage(response.data);
+  }
+  catch (error) {
+    showIziToast({
+      message: error.message,
       backgroundColor: '#EF4040',
       iconUrl: errorIcon
-    }));
+    });
+  }
 }
 
 async function axiosRequest() {
   axios.defaults.baseURL = 'https://pixabay.com';
-  return await axios.get('api/', {
+  return axios.get('api/', {
     params: {
       key: '42096263-920755fbf423cd5814494514c',
       q: memoryInput,
@@ -78,11 +80,11 @@ function renderImage({totalHits, hits}) {
     if (imageList.innerHTML === '' && totalHits > perPage) {
       loadBtn.insertAdjacentHTML('beforeend', '<button class="btn-load-more">Load more</button>');
       const btnLoadMore = document.querySelector('.btn-load-more');
-      btnLoadMore.addEventListener('click', onRequest);
+      btnLoadMore.addEventListener('click', loadImages);
     }
 
     if (pageNumber > totalPages) {
-      onBtnRemove();
+      removeLoadMoreButton();
       showIziToast({
         message: `We're sorry, but you've reached the end of search results.`,
         backgroundColor: '#FFA000',
@@ -94,20 +96,20 @@ function renderImage({totalHits, hits}) {
     imageList.insertAdjacentHTML('beforeend', markup);
 
     if (pageNumber > 2) {
-      onScroll();
+      scrollToNewImages();
     }
     
     lightbox.refresh();
   }else{
     showIziToast({
-      message: error,
+      message: error.message,
       backgroundColor: '#EF4040',
       iconUrl: errorIcon
     });
   }    
 }
 
-function onScroll () {
+function scrollToNewImages () {
   const elemCard = document.querySelector('.card');
   const getItemCoords = elemCard.getBoundingClientRect();
   window.scrollBy({
